@@ -1,0 +1,49 @@
+version: "3.8"
+volumes:
+    php-fpm-socket:
+    db-store:
+    vendor-store:
+    node_modules-store:
+
+services:
+    app:
+        build:
+            context: .
+            dockerfile: ./infra/docker/php/Dockerfile
+        volumes:
+            - php-fpm-socket:/var/run/php-fpm
+            - .:/work/backend
+            - vendor-store:/work/backend/vendor
+            - node_modules-store:/work/backend/node_modules
+
+    web:
+        build:
+            context: .
+            dockerfile: ./infra/docker/nginx/Dockerfile
+        ports:
+            - ${WEB_PORT:-80}:80
+        volumes:
+            - php-fpm-socket:/var/run/php-fpm
+            - .:/work/backend
+            - node_modules-store:/work/backend/node_modules
+
+    db:
+        build:
+            context: .
+            dockerfile: ./infra/docker/mysql/Dockerfile
+        ports:
+            - ${DB_PORT:-3306}:3306
+        volumes:
+            - db-store:/var/lib/mysql
+        environment:
+            - MYSQL_DATABASE=${DB_DATABASE:-sample_db}
+            - MYSQL_USER=${DB_USERNAME:-sample_user}
+            - MYSQL_PASSWORD=${DB_PASSWORD:-sample_pw}
+            - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-sample_pw}
+
+    adminer:
+        image: adminer
+        ports:
+            - 8080:8080
+        links:
+            - db
